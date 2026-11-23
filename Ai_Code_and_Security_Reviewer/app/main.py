@@ -6,7 +6,7 @@ from app.api.reviews import router as reviews_router  # 1. Import router
 
 
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
 app=FastAPI(title="AI code reviewer")

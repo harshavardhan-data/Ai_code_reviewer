@@ -4,5 +4,7 @@ class ReviewCreate(BaseModel):
     repository_url:str
     base_ref:str | None = None  # e.g . "main"
     head_ref:str | None = None  # e.g . "feature-x"
+    pr_number: int | None = None
 
+    
     

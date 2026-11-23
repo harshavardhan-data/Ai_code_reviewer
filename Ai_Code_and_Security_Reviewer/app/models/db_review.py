@@ -16,6 +16,10 @@ class Review(Base):
 
     repository_url:Mapped[str] = mapped_column(String(500))
 
+    pr_number :Mapped[int|None] =mapped_column(nullable=True)
+
+    commit_id: Mapped[str|None] = mapped_column(String(40),nullable=True)
+
     status: Mapped[str] = mapped_column(String(20),default="pending")
 
     created_at:Mapped[datetime] = mapped_column(DateTime,server_default=func.now())

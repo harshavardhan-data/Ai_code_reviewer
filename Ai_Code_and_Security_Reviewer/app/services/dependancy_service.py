@@ -2,7 +2,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from app.schemas.file import FileContext
-from app.services.ast_service import ASTService
+from app.services.ast_service import ASTService,ImportRef
 
 
 class DependencyService:
@@ -10,7 +10,42 @@ class DependencyService:
     def __init__(self,ast_service:ASTService):
         self.ast_service = ast_service
 
-    def _module_candidates(self, file_path: str) -> set[str]:
+    def _path_to_module_key(self, path: str) -> str:
+        # "app/utils.py" -> "app.utils"; "app/__init__.py" -> "app"
+        p = Path(path).with_suffix("")
+        if p.name == "__init__":
+            p = p.parent
+        return ".".join(p.parts)
+
+    def resolve_import_target(
+        self,
+        ref: ImportRef,
+        importer_path: str,
+        module_index: dict[str, set[str]],
+    ) -> set[str]:
+        """Resolve an ImportRef from importer_path to upstream file path(s)."""
+        if ref.level == 0:
+            return module_index.get(ref.module, set())
+
+        base = Path(importer_path).parent
+        for _ in range(ref.level - 1):
+            base = base.parent
+
+        hits: set[str] = set()
+
+        if ref.module:
+            # from ..foo.bar import x  -> base/foo/bar
+            rel = (base / ref.module.replace(".", "/")).as_posix()
+            hits |= module_index.get(self._path_to_module_key(rel), set())
+        else:
+            # from . import x  -> x may be a sibling module
+            for name in (ref.names or ()):
+                rel = (base / name).as_posix()
+                hits |= module_index.get(self._path_to_module_key(rel), set())
+
+        return hits
+
+    def _module_candidates(self, file_path: str|Path) -> set[str]:
         path = Path(file_path).with_suffix("")
 
         parts = list(path.parts)
@@ -46,39 +81,38 @@ class DependencyService:
 
         return dict(module_index)
 
+    def build_resolution_index(self,file_paths:list[Path],repo_path:str) -> dict[str, set[str]]:
+    
+        module_index: dict[str, set[str]] = defaultdict(set)
+    
+        for file_path in file_paths:
+            rel_path=(file_path.relative_to(repo_path)).as_posix() if repo_path else file_path.as_posix()
+            for module in self._module_candidates(file_path):
+                module_index[module].add(rel_path)
+
+        return dict(module_index)
+
     def build_dependency_scores(
         self,
-        file_contexts: list[FileContext],
+        changed_file_contexts: list[FileContext],
+        all_module_index: dict[str,set[str]],
     ) -> dict[str, int]:
 
-        module_index = self.build_module_index(file_contexts)
+        
+        dependency_scores :dict[str,int]=defaultdict(int)
 
-        dependency_scores = {
-            file.path: 0
-            for file in file_contexts
-        }
-
-        total_imports = 0
-        resolved_imports = 0
-
-        for file in file_contexts:
-
-            imports = self.ast_service.extract_imports(
-                file.content
-            )
+        for file in changed_file_contexts:
 
             # A file should contribute at most once to a dependency.
             resolved_targets = set()
 
-            for imported_module, level in imports:
+            for ref in self.ast_service.extract_imports(file.content):
 
-                if level != 0:
+                if ref.level != 0:
                     continue  # Handle relative imports separately later.
 
-                total_imports += 1
-
-                targets = module_index.get(
-                    imported_module,
+                targets = all_module_index.get(
+                    ref.module,
                     set(),
                 )
 
@@ -95,20 +129,6 @@ class DependencyService:
 
             for target in resolved_targets:
                 dependency_scores[target] += 1
-                resolved_imports += 1
+        
 
-        resolution_rate = (
-            resolved_imports / total_imports
-            if total_imports
-            else 1.0
-        )
-
-        metrics = {
-            "total_imports": float(total_imports),
-            "resolved_imports": float(resolved_imports),
-            "resolution_rate": resolution_rate,
-        }
-        for key,val in metrics.items():
-            print(f"{key} : {val}")
-
-        return dependency_scores
+        return dict(dependency_scores)

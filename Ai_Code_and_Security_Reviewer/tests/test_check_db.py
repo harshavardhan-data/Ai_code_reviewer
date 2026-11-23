@@ -2,6 +2,22 @@ from app.db import SessionLocal
 from app.models.db_finding import Finding
 from app.models.db_review import Review
 from sqlalchemy import select
+from app.repositories.review_repository import ReviewRepository
+
+db=SessionLocal()
+
+rw=ReviewRepository(db)
+
+
+
+fn=rw.get_findings(review_id=59)
+
+for finding in fn:
+    print("FILE PATH :",finding.file_path)
+    print("Description :",finding.description)
+    print("Suggestion  :",finding.suggestion)
+    print("Line No :",finding.line_number)
+    print("Severity :",finding.severity,finding.category,finding.title)
 
 
 

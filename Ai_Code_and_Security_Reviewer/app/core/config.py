@@ -9,3 +9,10 @@ if not GEMINI_API_KEY:
     raise RuntimeError("Gemini Api Key is not configured")
 else:
     print("SUCCESS")
+
+def _initialize_git():
+    key=os.environ.get("GITHUB_TOKEN")
+
+    return key
+
+git_key=_initialize_git()

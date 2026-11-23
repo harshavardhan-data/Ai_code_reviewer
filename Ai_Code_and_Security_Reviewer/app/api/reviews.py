@@ -23,13 +23,15 @@ def create_review_endpoint(data: ReviewCreate,background_tasks:BackgroundTasks,r
         review_id=review.id,
         repository_url=str(data.repository_url),
         base_ref=data.base_ref,
-        head_ref=data.head_ref
+        head_ref=data.head_ref,
+        pr_number=data.pr_number
     )
 
    
     return {
         "id":review.id,
         "repository_url": review.repository_url,
+        "pr_number":review.pr_number,
         "status":review.status,
         "created_at":review.created_at,
     }
@@ -47,6 +49,8 @@ def get_review_status_endpoint(review_id:int,review_service:ReviewService=Depend
         "repository_url": review.repository_url,
         "status": review.status,
         "created_at": review.created_at,
+        "commit_id":review.commit_id,
+        "pr_number":review.pr_number
     }
 
 @router.get("/{review_id}/findings")

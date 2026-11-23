@@ -22,8 +22,8 @@ class ReviewRepository:
         return self.session.execute(select(Review)).scalars().all()
 
 
-    def create_review(self,repository_url:str) -> Review:
-        review=Review(repository_url=repository_url)
+    def create_review(self,repository_url:str,pr_number:int|None=None) -> Review:
+        review=Review(repository_url=repository_url,pr_number=pr_number)
 
         try:
             self.session.add(review)
@@ -40,6 +40,19 @@ class ReviewRepository:
         if review:
             try:
                 review.status = status
+                self.session.commit()
+                self.session.refresh(review)
+            except Exception:
+                self.session.rollback()
+                raise
+        return review
+
+    def update_commit_id(self,review_id:int,commit_id:str) -> Review | None :
+        review=self.get_by_id(review_id)
+
+        if review:
+            try:
+                review.commit_id=commit_id
                 self.session.commit()
                 self.session.refresh(review)
             except Exception:

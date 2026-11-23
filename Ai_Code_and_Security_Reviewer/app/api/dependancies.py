@@ -9,6 +9,7 @@ from app.services.context_service import ContextService
 from app.services.review_service import ReviewService
 from app.services.ast_service import ASTService
 from app.services.dependancy_service import DependencyService
+from app.services.github_service import GitHubService
 
 
 
@@ -25,6 +26,7 @@ def get_git_service() -> GitService:return GitService()
 def get_file_service() -> FileService:return FileService()
 def get_ai_service() -> AIService:return AIService()
 def get_ast_service() -> ASTService:return ASTService()
+def get_github_service() -> GitHubService:return GitHubService()
 
 def get_dependancy_service(ast_service:ASTService=Depends(get_ast_service)) -> DependencyService:return DependencyService(ast_service)
 def get_context_service(ast_service:ASTService=Depends(get_ast_service),
@@ -36,6 +38,8 @@ def get_review_service(
         file_service: FileService = Depends(get_file_service),
         ai_service: AIService = Depends(get_ai_service),
         context_service: ContextService = Depends(get_context_service),
+        dependancy_service: DependencyService=Depends(get_dependancy_service),
+        github_service:GitHubService=Depends(get_github_service),
 ) -> ReviewService:
-    return ReviewService(git_service,file_service,ai_service,context_service)
+    return ReviewService(git_service,file_service,ai_service,context_service,dependancy_service,github_service)
 

@@ -1,0 +1,18 @@
+services:
+  reviewer:
+    build: .
+    container_name: reviewer-local
+    ports: 
+      - "8000:8000"
+    volumes:
+      - reviewer_data:/app/data
+    environment:
+      - GEMINI_API_KEY: ${GEMINI_API_KEY}
+      - GITHUB_TOKEN : ${GITHUB_TOKEN}
+    restart: unless-stopped
+  
+volumes:
+  reviewer_data
+    
+
+
