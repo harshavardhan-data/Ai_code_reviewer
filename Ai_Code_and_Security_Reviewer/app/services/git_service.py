@@ -28,13 +28,14 @@ class GitService:
     ) -> Path:
         """Clones a remote repository into a target directory.
         
-        Performs a shallow clone (--depth 1) for speed and disk optimization.
-        Cleans up existing target directories prior to cloning.
+        Uses a shallow clone when depth is provided. In PR mode
+        (base_ref + head_ref given) fetch both refs explicitly and
+        check out head_ref, so the working tree matches the PR head.
         """
         try:
 
             cmd=["git","clone"]
-            if depth is not None and not(base_ref and head_ref):
+            if depth is not None:
                 cmd.extend(["--depth",str(depth)])
 
             cmd.extend([repository_url,str(destination)])
@@ -43,14 +44,22 @@ class GitService:
             self._run_git(cmd)
 
             if base_ref and head_ref:
-                self._run_git(
-                    ["git","-C",str(destination),"fetch","origin",base_ref,head_ref]
-                )
-                # ADD THIS: Check out the head_ref so the files on disk update to the new code
-                self._run_git(
-                                    ["git","-C",str(destination),"checkout",head_ref],
-                                )
+                base = base_ref.removeprefix("origin/")
+                head = head_ref.removeprefix("origin/")
+                fetch_cmd=[
+                    "git","-C",str(destination),"fetch","origin",
+                    f"{base}:refs/remotes/origin/{base}",
+                    f"{head}:refs/remotes/origin/{head}",
+                    ]
 
+                if depth is not None:
+                    fetch_cmd.extend(["--depth", str(depth)])
+                self._run_git(fetch_cmd)
+                self._run_git(
+                    ["git", "-C", str(destination),
+                     "checkout", "-B", head, f"origin/{head}"]
+                )
+            
             return destination
 
         except FileNotFoundError as exc:

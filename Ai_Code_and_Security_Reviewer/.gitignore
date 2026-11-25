@@ -3,6 +3,7 @@
 
 # env file
 .env
+.env*
 
 # Python Cache
 __pycache__/

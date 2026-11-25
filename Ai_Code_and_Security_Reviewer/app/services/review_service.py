@@ -13,6 +13,7 @@ from app.services.dependancy_service import DependencyService
 from app.services.diff_parser import parse_diff
 from app.services.github_service import GitHubService
 import re
+import traceback
 
 
 class ReviewService:
@@ -63,7 +64,7 @@ class ReviewService:
         with SessionLocal() as session:
             repo = ReviewRepository(session)
             repo.update_status(review_id, "processing")
-            print(f"\n[BACKGROUND] Started processing review #{review_id} for {repository_url}")
+            print(f"\n[BACKGROUND] Started processing review #{review_id} for {repository_url}",flush=True)
 
             try:
                 with TemporaryDirectory() as temp_dir:
@@ -78,12 +79,12 @@ class ReviewService:
                         raw_diff=self.git_service.get_diff(repository_path,base=base_ref,head=head_ref)
                         changed_files=parse_diff(raw_diff)
                         changed_paths={file.path for file in changed_files}
-                        print(f"[DEBUG] Raw diff string length: {len(raw_diff)}")
-                        print(f"[DEBUG] Parsed changed_files count: {len(changed_files)}")
-                        print(f"[DEBUG] changed_paths content: {changed_paths}")
+                        print(f"[DEBUG] Raw diff string length: {len(raw_diff)}",flush=True)
+                        print(f"[DEBUG] Parsed changed_files count: {len(changed_files)}",flush=True)
+                        print(f"[DEBUG] changed_paths content: {changed_paths}",flush=True)
 
                         for f in changed_files:
-                            print(f"[DEBUG] File: {f.path}, Added Lines: {sorted(list(f.added_lines))}")
+                            print(f"[DEBUG] File: {f.path}, Added Lines: {sorted(list(f.added_lines))}",flush=True)
                         
                     file_contexts=None
 
@@ -123,9 +124,10 @@ class ReviewService:
                                                                                  dependancy_scores=dependancy_scores if changed_paths else None)
                     
                     
-                    print(f"Collected {len(file_contexts)} items from the repo")
-                    print(f"Collected Exclusively {len({file.file_path for file in selected_file_contexts})} Files")
-    
+                    print(f"Collected {len(file_contexts)} items from the repo",flush=True)
+                    print(f"Collected Exclusively {len({file.file_path for file in selected_file_contexts})} Files",flush=True)
+
+                    print(f"Entering into AI Service",flush=True)
                     review_findings = self.ai_service.review_code(selected_file_contexts,changed_files=changed_files)
                     if changed_files is not None:
                         added_by_file={f.path:f.added_lines for f in changed_files}
@@ -134,14 +136,15 @@ class ReviewService:
                             if f.line_number is not None and
                             f.line_number in added_by_file.get(f.file_path,set())
                         ]
+                    print(f"AI Service Complete,DB Ingestion",flush=True)
                     repo.create_findings(review_id=review_id, findings_data=review_findings)
                     try:
                         head_sha = self.git_service.get_head_sha(repository_path)
                         repo.update_commit_id(review_id,head_sha)
                     except Exception as exc:
-                        print(f"Failed to generate commit_id {exc!r}")
+                        print(f"Failed to generate commit_id {exc!r}",flush=True)
                     repo.update_status(review_id, "completed")
-                    print(f"[BACKGROUND] Review #{review_id} COMPLETED successfully!\n")
+                    print(f"[BACKGROUND] Review #{review_id} COMPLETED successfully!\n",flush=True)
                     print(review_findings)
         
                   
@@ -154,15 +157,16 @@ class ReviewService:
                                 owner, repo_name, pr_number, head_sha, review_findings.findings
                             )
                         except Exception as exc:
-                            print(f"[BACKGROUND] GitHub inline comment failed: {exc!r}")
+                            print(f"[BACKGROUND] GitHub inline comment failed: {exc!r}",flush=True)
                             # do NOT fail the whole review for a comment failure                   
             except Exception as exc:
                 session.rollback()
                 try:
                     repo.update_status(review_id, "failed")
                 except Exception as db_exc:
-                    print(f"[BACKGROUND] Could not mark #{review_id} failed: {db_exc!r}")
-                print(f"[BACKGROUND] Review #{review_id} FAILED: {exc!r}")
+                    print(f"[BACKGROUND] Could not mark #{review_id} failed: {db_exc!r}",flush=True)
+                print(f"[BACKGROUND] Review #{review_id} FAILED: {exc!r}",flush=True)
+                traceback.print_exc()
                     # intentionally NO raise — background tasks must not propagate
 
 

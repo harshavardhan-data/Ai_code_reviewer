@@ -20,6 +20,8 @@ COPY ./app ./app
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+ENV PYTHONUNBUFFERED=1
+
 # Healthcheck (you already have /health)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1

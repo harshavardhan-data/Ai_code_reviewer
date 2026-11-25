@@ -94,13 +94,13 @@ class AIService:
                 """
         # PR mode — include diff per changed file
         changed_by_path={f.path:f for f in changed_files}
-        print(f"\n[DEBUG _build_prompt] Keys in changed_by_path: {list(changed_by_path.keys())}")
-        print(f"[DEBUG _build_prompt] All chunk_by_file keys (files we have chunks for): {list(chunks_by_file.keys())}\n")
+        print(f"\n[DEBUG _build_prompt] Keys in changed_by_path: {list(changed_by_path.keys())}",flush=True)
+        print(f"[DEBUG _build_prompt] All chunk_by_file keys (files we have chunks for): {list(chunks_by_file.keys())}\n",flush=True)
         other_sections=[]
         for path,file_chunks in chunks_by_file.items():
             changed=changed_by_path.get(path)
             
-            print(f"[DEBUG _build_prompt] Checking file path: '{path}' | Matched changed file? {changed is not None}")
+            print(f"[DEBUG _build_prompt] Checking file path: '{path}' | Matched changed file? {changed is not None}",flush=True)
             # 1. Format chunks with explicit real line numbers
             formatted_chunks = []
             for c in file_chunks:
